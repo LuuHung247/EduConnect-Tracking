@@ -7,6 +7,7 @@
 Tracking Service theo dõi lesson hiện tại mà user đang học. Điều này giúp AI Chatbot biết context và có thể trả lời câu hỏi về bài học hiện tại.
 
 **Use Case:**
+
 - User vào trang lesson → Frontend gọi `/lesson/enter` → Tracking Service lưu lesson hiện tại
 - User hỏi chatbot về bài học → Chatbot gọi `/user/{id}/current` → Biết user đang học lesson nào
 - Chatbot lấy thông tin lesson từ Backend → Trả lời câu hỏi dựa trên nội dung lesson
@@ -26,18 +27,22 @@ Frontend → Tracking Service → MongoDB
 ## API Endpoints
 
 ### Track Current Lesson
+
 - `POST /api/tracking/lesson/enter` - Set current lesson (user enters lesson page)
 - `POST /api/tracking/lesson/exit` - Clear current lesson (user exits lesson page)
 
 ### Get Current Lesson (for Chatbot)
+
 - `GET /api/tracking/user/{user_id}/current` - Get user's current lesson
 
 ### Health Check
+
 - `GET /health` - Service health check
 
 ## Data Model
 
 ### MongoDB Collection: current_lesson_tracking
+
 ```javascript
 {
   user_id: String (unique),    // Primary key
@@ -49,6 +54,7 @@ Frontend → Tracking Service → MongoDB
 ```
 
 **Simple Schema:**
+
 - Mỗi user chỉ có 1 record (hoặc không có)
 - Nếu có record = user đang trong lesson
 - Nếu không có record = user không ở trong lesson nào
@@ -56,21 +62,23 @@ Frontend → Tracking Service → MongoDB
 ## Usage Examples
 
 ### 1. User vào lesson page (Frontend)
+
 ```javascript
 // Khi user click vào lesson
-await fetch('/api/tracking/lesson/enter', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+await fetch("/api/tracking/lesson/enter", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     user_id: currentUser.id,
     lesson_id: lesson.id,
     serie_id: serie.id,
-    lesson_title: lesson.title
-  })
+    lesson_title: lesson.title,
+  }),
 });
 ```
 
 ### 2. Chatbot kiểm tra user đang học gì
+
 ```javascript
 // Chatbot service
 const response = await fetch(`/api/tracking/user/${userId}/current`);
@@ -86,20 +94,22 @@ const lessonInfo = await fetch(`/api/v1/lessons/${data.lesson_id}`);
 ```
 
 ### 3. User rời khỏi lesson (Frontend)
+
 ```javascript
 // Khi user navigate ra khỏi lesson page
-await fetch('/api/tracking/lesson/exit', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+await fetch("/api/tracking/lesson/exit", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    user_id: currentUser.id
-  })
+    user_id: currentUser.id,
+  }),
 });
 ```
 
 ## Response Examples
 
 ### User đang trong lesson:
+
 ```json
 GET /api/tracking/user/user123/current
 
@@ -114,6 +124,7 @@ GET /api/tracking/user/user123/current
 ```
 
 ### User KHÔNG trong lesson nào:
+
 ```json
 GET /api/tracking/user/user123/current
 
@@ -130,6 +141,7 @@ GET /api/tracking/user/user123/current
 ## Integration Flow
 
 ### Chatbot Integration
+
 ```
 1. User asks chatbot: "Giải thích cho tôi về biến trong Python"
 
@@ -145,6 +157,7 @@ GET /api/tracking/user/user123/current
 ```
 
 ### Frontend Integration
+
 ```
 On Lesson Page Mount:
   → POST /api/tracking/lesson/enter
@@ -174,6 +187,7 @@ After starting the service, access:
 - **ReDoc**: http://localhost:8002/redoc
 
 Swagger UI allows you to:
+
 - 🧪 Test all endpoints interactively
 - 📝 See request/response examples
 - ✅ Validate your API calls
@@ -183,9 +197,11 @@ Swagger UI allows you to:
 
 1. **Open Swagger**: http://localhost:8002/docs
 2. **Test Enter Lesson**:
+
    - Click `POST /api/tracking/lesson/enter`
    - Click "Try it out"
    - Use example payload or customize:
+
    ```json
    {
      "user_id": "user123",
@@ -194,10 +210,12 @@ Swagger UI allows you to:
      "lesson_title": "Introduction to Python"
    }
    ```
+
    - Click "Execute"
    - Check response (should be 200 OK)
 
 3. **Test Get Current**:
+
    - Click `GET /api/tracking/user/{user_id}/current`
    - Click "Try it out"
    - Enter user_id: `user123`
@@ -205,6 +223,7 @@ Swagger UI allows you to:
    - Should return lesson info with `is_in_lesson: true`
 
 4. **Test Exit Lesson**:
+
    - Click `POST /api/tracking/lesson/exit`
    - Click "Try it out"
    - Use payload: `{"user_id": "user123"}`
@@ -232,6 +251,7 @@ docker-compose up tracking-service
 ```
 
 Then access:
+
 - **API**: http://localhost:8002
 - **Swagger UI**: http://localhost:8002/docs
 - **ReDoc**: http://localhost:8002/redoc
@@ -239,6 +259,7 @@ Then access:
 ## Configuration
 
 Environment variables (`.env.example`):
+
 - `MONGODB_URI` - MongoDB connection string
 - `MONGODB_NAME` - Database name (default: edu-connect)
 - `PORT` - Service port (default: 8002)
