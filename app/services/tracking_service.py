@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, List
 from app.utils.mongodb import get_db
 from bson import ObjectId
@@ -78,6 +78,57 @@ class TrackingService:
             logger.error(f"Error fetching lesson details: {e}")
             return None
 
+    def _cleanup_stale_tabs(self, user_id: str, stale_minutes: int = 30) -> None:
+        """
+        Remove tabs that haven't been active for more than stale_minutes
+        This prevents accumulation of dead tabs when browser is closed without cleanup
+        """
+        try:
+            tracking = self._tracking_collection.find_one({"user_id": user_id})
+            if not tracking:
+                return
+
+            now = datetime.now(timezone.utc)
+            active_lessons = tracking.get("active_lessons", [])
+
+            # Filter out stale tabs (not active for > stale_minutes)
+            stale_threshold = now - timedelta(minutes=stale_minutes)
+
+            fresh_lessons = []
+            removed_count = 0
+
+            for lesson in active_lessons:
+                last_active = lesson.get("last_active")
+                # Handle both datetime objects and None
+                if last_active is None or last_active > stale_threshold:
+                    fresh_lessons.append(lesson)
+                else:
+                    removed_count += 1
+                    logger.info(f"Removing stale tab {lesson.get('tab_id')} for user {user_id} (inactive since {last_active})")
+
+            if removed_count > 0:
+                # Update database with fresh lessons only
+                if len(fresh_lessons) == 0:
+                    # No fresh lessons left, delete entire document
+                    self._tracking_collection.delete_one({"user_id": user_id})
+                    logger.info(f"Cleaned up all stale tabs for user {user_id} ({removed_count} tabs removed)")
+                else:
+                    # Update with fresh lessons and set current to most recent
+                    most_recent = max(fresh_lessons, key=lambda x: x.get("last_active", datetime.min))
+                    self._tracking_collection.update_one(
+                        {"user_id": user_id},
+                        {
+                            "$set": {
+                                "active_lessons": fresh_lessons,
+                                "current_lesson": most_recent,
+                                "last_updated": now
+                            }
+                        }
+                    )
+                    logger.info(f"Cleaned up {removed_count} stale tabs for user {user_id}, {len(fresh_lessons)} tabs remaining")
+        except Exception as e:
+            logger.error(f"Error cleaning up stale tabs: {e}")
+
     def set_current_lesson(
         self,
         user_id: str,
@@ -92,6 +143,9 @@ class TrackingService:
         Automatically sets this as the current (focused) lesson
         """
         try:
+            # Cleanup stale tabs first (tabs inactive for > 30 minutes)
+            self._cleanup_stale_tabs(user_id, stale_minutes=30)
+
             now = datetime.now(timezone.utc)
 
             new_lesson = {
