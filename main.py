@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import router
 import logging
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
@@ -42,10 +43,11 @@ Simple service to track user's current lesson for AI Chatbot context.
     redoc_url="/redoc"  # Alternative docs
 )
 
-# CORS middleware
+# CORS middleware - configure from environment
+cors_origins = os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(',')
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust in production
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
