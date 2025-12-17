@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="/api/tracking",
+    prefix="/v1/api/tracking",
     tags=["Tracking"]
 )
 
